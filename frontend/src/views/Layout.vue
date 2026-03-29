@@ -1,5 +1,4 @@
 <template>
-  <!-- 强制通过 :key="locale" 在语言改变时刷新整个组件，确保所有 getMenuTitle 重新执行 -->
   <el-container :key="locale" class="layout-container">
     <!-- 侧边栏 -->
     <el-aside :width="isCollapse ? '72px' : '260px'" class="aside">
@@ -23,21 +22,19 @@
         @select="handleMenuSelect"
       >
         <template v-for="menu in menus" :key="menu.id">
-          <!-- 有子菜单 -->
           <el-sub-menu v-if="menu.children && menu.children.length" :index="menu.path">
             <template #title>
               <el-icon><component :is="getIcon(menu.icon)" /></el-icon>
-              <span>{{ getMenuTitle(menu) }}</span>
+              <span>{{ $t(menu.name) }}</span>
             </template>
             <el-menu-item v-for="child in menu.children" :key="child.id" :index="child.path">
               <el-icon><component :is="getIcon(child.icon)" /></el-icon>
-              <template #title>{{ getMenuTitle(child) }}</template>
+              <template #title>{{ $t(child.name) }}</template>
             </el-menu-item>
           </el-sub-menu>
-          <!-- 无子菜单 -->
           <el-menu-item v-else :index="menu.path">
             <el-icon><component :is="getIcon(menu.icon)" /></el-icon>
-            <template #title>{{ getMenuTitle(menu) }}</template>
+            <template #title>{{ $t(menu.name) }}</template>
           </el-menu-item>
         </template>
       </el-menu>
@@ -45,7 +42,6 @@
 
     <!-- 主内容区 -->
     <el-container class="main-container">
-      <!-- 头部 -->
       <el-header class="header">
         <div class="header-left">
           <div class="header-collapse-btn" @click="isCollapse = !isCollapse">
@@ -57,16 +53,15 @@
           <el-breadcrumb separator="/">
             <el-breadcrumb-item :to="{ path: '/home' }">
               <el-icon><HomeFilled /></el-icon>
-              {{ t('menu.home') }}
+              {{ $t('menu.home') }}
             </el-breadcrumb-item>
             <el-breadcrumb-item v-if="route.meta?.title">
-              {{ t(route.meta.title) }}
+              {{ $t(route.meta.title) }}
             </el-breadcrumb-item>
           </el-breadcrumb>
         </div>
 
         <div class="header-right">
-          <!-- 语言切换 -->
           <el-dropdown @command="handleLanguageChange" trigger="click">
             <div class="header-action">
               <el-icon><Bell /></el-icon>
@@ -95,15 +90,15 @@
               <el-dropdown-menu>
                 <el-dropdown-item command="profile">
                   <el-icon><User /></el-icon>
-                  {{ t('menu.profile') }}
+                  {{ $t('menu.profile') }}
                 </el-dropdown-item>
                 <el-dropdown-item command="settings">
                   <el-icon><Setting /></el-icon>
-                  {{ t('menu.systemSettings') }}
+                  {{ $t('menu.systemSettings') }}
                 </el-dropdown-item>
                 <el-dropdown-item divided command="logout">
                   <el-icon><SwitchButton /></el-icon>
-                  {{ t('common.logout') }}
+                  {{ $t('common.logout') }}
                 </el-dropdown-item>
               </el-dropdown-menu>
             </template>
@@ -111,7 +106,6 @@
         </div>
       </el-header>
 
-      <!-- 标签页 -->
       <div class="tabs-container">
         <el-tabs
           v-model="tabStore.currentTab"
@@ -123,18 +117,16 @@
           <el-tab-pane
             v-for="tab in tabStore.tabs"
             :key="tab.path + locale"
-            :label="getTabLabel(tab)"
+            :label="$t(tab.meta?.title || tab.title)"
             :name="tab.path"
             :closable="tab.closable"
           />
         </el-tabs>
       </div>
 
-      <!-- 页面内容 -->
       <el-main class="main-content">
         <router-view v-slot="{ Component }">
           <transition name="fade" mode="out-in">
-            <!-- 给 component 绑定 key 强制刷新内页文字 -->
             <component :is="Component" :key="route.fullPath + locale" />
           </transition>
         </router-view>
@@ -167,49 +159,6 @@ const activeMenu = computed(() => route.path)
 
 const iconMap = { HomeFilled, User, Key, Setting, OfficeBuilding, Monitor }
 const getIcon = (name) => iconMap[name] || HomeFilled
-
-// 建立一个名字到 Key 的映射作为最后的保底方案
-const nameKeyMap = {
-  '首页': 'home',
-  'Home': 'home',
-  '系统设置': 'systemSettings',
-  'System Settings': 'systemSettings',
-  '用户管理': 'userMgmt',
-  'User Management': 'userMgmt',
-  '角色管理': 'roleMgmt',
-  'Role Management': 'roleMgmt',
-  '站点管理': 'siteMgmt',
-  'Site Management': 'siteMgmt'
-}
-
-/**
- * 核心翻译函数
- * 逻辑：路径匹配 > 名字映射 > 原始名称
- */
-const getMenuTitle = (item) => {
-  // 1. 尝试通过路由路径匹配
-  const resolved = router.resolve(item.path)
-  if (resolved && resolved.meta && resolved.meta.title) {
-    return t(resolved.meta.title)
-  }
-  
-  // 2. 尝试通过名字映射（处理数据库返回的中文名）
-  const key = nameKeyMap[item.name.trim()]
-  if (key) {
-    return t('menu.' + key)
-  }
-  
-  // 3. 兜底返回原名
-  return item.name
-}
-
-const getTabLabel = (tab) => {
-  const resolved = router.resolve(tab.path)
-  if (resolved && resolved.meta && resolved.meta.title) {
-    return t(resolved.meta.title)
-  }
-  return tab.title
-}
 
 const loadMenus = async () => {
   try {
