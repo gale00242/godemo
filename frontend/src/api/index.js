@@ -89,6 +89,15 @@ export default {
   deleteRole(id) {
     return api.delete(`/roles/${id}`)
   },
+  getRoleMenus(id) {
+    return api.get(`/roles/${id}/menus`)
+  },
+  updateRoleMenus(id, menuIds) {
+    return api.post(`/roles/${id}/menus`, { menu_ids: menuIds })
+  },
+  getAllMenus() {
+    return api.get('/all-menus')
+  },
   
   // 站点管理
   getAllSites() {

@@ -59,6 +59,8 @@ export default {
     description: '描述',
     status: '状态',
     actions: '操作',
+    permission: '分配权限',
+    assignPermission: '分配权限菜单',
     deleteConfirm: '确定删除角色 "{name}" 吗？',
     nameRequired: '请输入角色名称',
     codeRequired: '请输入角色代码'
@@ -73,5 +75,16 @@ export default {
     deleteConfirm: '确定删除站点 "{name}" 吗？',
     nameRequired: '请输入站点名称',
     codeRequired: '请输入站点代码'
+  },
+  error: {
+    backHome: '返回首页',
+    404: {
+      title: '404 找不到页面',
+      desc: '抱歉，您访问的页面不存在。'
+    },
+    403: {
+      title: '403 无权限访问',
+      desc: '抱歉，您没有权限访问该页面。'
+    }
   }
 }

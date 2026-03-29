@@ -45,9 +45,12 @@
             </span>
           </template>
         </el-table-column>
-        <el-table-column :label="$t('roles.actions')" width="140" align="center" fixed="right">
+        <el-table-column :label="$t('roles.actions')" width="180" align="center" fixed="right">
           <template #default="{ row }">
             <div class="action-cell">
+              <el-button type="warning" text size="small" @click="handlePermission(row)" :title="$t('roles.permission')">
+                <el-icon><Lock /></el-icon>
+              </el-button>
               <el-button type="primary" text size="small" @click="handleEdit(row)" :title="$t('common.edit')">
                 <svg class="btn-icon-small" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
@@ -97,13 +100,45 @@
         </el-button>
       </template>
     </el-dialog>
+
+    <!-- 权限分配弹窗 -->
+    <el-dialog
+      v-model="permissionDialogVisible"
+      :title="$t('roles.assignPermission')"
+      width="400px"
+      class="role-dialog"
+    >
+      <div class="permission-tree-container" v-loading="treeLoading">
+        <el-tree
+          ref="treeRef"
+          :data="allMenus"
+          show-checkbox
+          node-key="id"
+          :props="{ label: 'name', children: 'children' }"
+          default-expand-all
+        >
+          <template #default="{ node, data }">
+            <span class="custom-tree-node">
+              <el-icon v-if="data.icon" class="menu-icon"><component :is="getIcon(data.icon)" /></el-icon>
+              <span>{{ $t(data.name) }}</span>
+            </span>
+          </template>
+        </el-tree>
+      </div>
+      <template #footer>
+        <el-button @click="permissionDialogVisible = false">{{ $t('common.cancel') }}</el-button>
+        <el-button type="primary" class="btn-primary" @click="handlePermissionSubmit" :loading="permissionSubmitting">
+          {{ $t('common.confirm') }}
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Key } from '@element-plus/icons-vue'
+import { Key, Lock, HomeFilled, Setting, User, OfficeBuilding, Monitor } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import api from '../api'
 
@@ -113,6 +148,14 @@ const loading = ref(false)
 const dialogVisible = ref(false)
 const submitting = ref(false)
 const formRef = ref()
+
+// 权限相关
+const permissionDialogVisible = ref(false)
+const treeLoading = ref(false)
+const permissionSubmitting = ref(false)
+const allMenus = ref([])
+const currentRoleId = ref(null)
+const treeRef = ref()
 
 const dialogTitle = computed(() => roleForm.id ? t('common.edit') : t('common.add'))
 
@@ -128,6 +171,9 @@ const formRules = computed(() => ({
   name: [{ required: true, message: t('roles.nameRequired'), trigger: 'blur' }],
   code: [{ required: true, message: t('roles.codeRequired'), trigger: 'blur' }],
 }))
+
+const iconMap = { HomeFilled, Setting, User, OfficeBuilding, Monitor, Key, Lock }
+const getIcon = (name) => iconMap[name] || HomeFilled
 
 const getRoleClass = (code) => {
   const map = {
@@ -159,6 +205,44 @@ const handleAdd = () => {
 const handleEdit = (row) => {
   Object.assign(roleForm, { ...row })
   dialogVisible.value = true
+}
+
+const handlePermission = async (row) => {
+  currentRoleId.value = row.id
+  permissionDialogVisible.value = true
+  treeLoading.value = true
+  try {
+    // 加载所有菜单
+    if (allMenus.value.length === 0) {
+      const menusRes = await api.getAllMenus()
+      allMenus.value = menusRes.data
+    }
+    // 加载角色已有的菜单ID
+    const roleMenusRes = await api.getRoleMenus(row.id)
+    treeRef.value?.setCheckedKeys(roleMenusRes.data)
+  } catch (error) {
+    console.error('加载权限数据失败:', error)
+  } finally {
+    treeLoading.value = false
+  }
+}
+
+const handlePermissionSubmit = async () => {
+  const selectedKeys = treeRef.value.getCheckedKeys()
+  // 注意：如果是树形结构且需要包含父级节点（即使没全选），需要处理半选状态
+  const halfCheckedKeys = treeRef.value.getHalfCheckedKeys()
+  const allSelectedKeys = [...selectedKeys, ...halfCheckedKeys]
+  
+  permissionSubmitting.value = true
+  try {
+    await api.updateRoleMenus(currentRoleId.value, allSelectedKeys)
+    ElMessage.success(t('common.success'))
+    permissionDialogVisible.value = false
+  } catch (error) {
+    console.error('保存权限失败:', error)
+  } finally {
+    permissionSubmitting.value = false
+  }
 }
 
 const handleDelete = async (row) => {
@@ -311,6 +395,26 @@ onMounted(() => loadRoles())
 }
 
 .status-text { margin-left: 12px; font-size: 14px; color: var(--text-secondary); }
+
+.permission-tree-container {
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 10px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--border-radius);
+}
+
+.custom-tree-node {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.menu-icon {
+  font-size: 16px;
+  color: var(--text-secondary);
+}
 
 .role-dialog :deep(.el-input__wrapper),
 .role-dialog :deep(.el-textarea__inner) {

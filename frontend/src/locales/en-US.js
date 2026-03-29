@@ -59,6 +59,8 @@ export default {
     description: 'Description',
     status: 'Status',
     actions: 'Actions',
+    permission: 'Assign Permissions',
+    assignPermission: 'Assign Permission Menus',
     deleteConfirm: 'Are you sure you want to delete role "{name}"?',
     nameRequired: 'Role name is required',
     codeRequired: 'Role code is required'
@@ -73,5 +75,16 @@ export default {
     deleteConfirm: 'Are you sure you want to delete site "{name}"?',
     nameRequired: 'Site name is required',
     codeRequired: 'Site code is required'
+  },
+  error: {
+    backHome: 'Back Home',
+    404: {
+      title: '404 Not Found',
+      desc: 'Sorry, the page you visited does not exist.'
+    },
+    403: {
+      title: '403 Forbidden',
+      desc: 'Sorry, you do not have permission to access this page.'
+    }
   }
 }

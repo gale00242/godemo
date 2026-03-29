@@ -43,7 +43,23 @@ const routes = [
         component: () => import('../views/Sites.vue'),
         meta: { title: 'menu.siteMgmt' },
       },
+      {
+        path: '/403',
+        name: '403',
+        component: () => import('../views/error/403.vue'),
+        meta: { title: 'error.403.title' },
+      },
+      {
+        path: '/404',
+        name: '404',
+        component: () => import('../views/error/404.vue'),
+        meta: { title: 'error.404.title' },
+      },
     ],
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    redirect: '/404',
   },
 ]
 

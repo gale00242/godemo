@@ -71,6 +71,45 @@ func GetMenus(c *gin.Context) {
 	})
 }
 
+func GetAllMenus(c *gin.Context) {
+	var allMenus []models.Menu
+	if err := database.DB.Order("sort asc").Find(&allMenus).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "获取菜单失败"})
+		return
+	}
+
+	menuMap := make(map[uint]*MenuItem)
+	for _, menu := range allMenus {
+		menuMap[menu.ID] = &MenuItem{
+			ID:       menu.ID,
+			Name:     menu.Name,
+			Path:     menu.Path,
+			Icon:     menu.Icon,
+			ParentID: menu.ParentID,
+			Sort:     menu.Sort,
+			Children: []*MenuItem{},
+		}
+	}
+
+	var result []*MenuItem
+	for _, menu := range menuMap {
+		if menu.ParentID == nil || *menu.ParentID == 0 {
+			result = append(result, menu)
+		} else {
+			if parent, ok := menuMap[*menu.ParentID]; ok {
+				parent.Children = append(parent.Children, menu)
+			}
+		}
+	}
+
+	sortMenus(result)
+
+	c.JSON(http.StatusOK, gin.H{
+		"code": 200,
+		"data": result,
+	})
+}
+
 func sortMenus(menus []*MenuItem) {
 	sort.Slice(menus, func(i, j int) bool {
 		return menus[i].Sort < menus[j].Sort
