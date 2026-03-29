@@ -1,0 +1,7 @@
+db_host: mysql
+db_port: 3306
+db_user: root
+db_password: root123
+db_name: go_vue_admin
+jwt_secret: your-super-secret-key-change-in-production
+server_port: "8080"
