@@ -1,25 +1,19 @@
 version: '3.8'
 
 services:
-  mysql:
-    image: mysql:8.0
-    container_name: go-vue-admin-mysql
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: go-vue-admin-sqlserver-docker
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: root123
-      MYSQL_DATABASE: go_vue_admin
-      MYSQL_USER: admin
-      MYSQL_PASSWORD: admin123
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "Password123!"
+      MSSQL_PID: "Developer"
     ports:
-      - "3306:3306"
+      - "1433:1433"
     volumes:
-      - mysql_data:/var/lib/mysql
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --init-connect="SET NAMES utf8mb4"
-    healthcheck:
-      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
-      timeout: 20s
-      retries: 10
+      - sqlserver_data:/var/opt/mssql
+      - ./init_sqlserver.sql:/tmp/init.sql
     networks:
       - app-network
 
@@ -30,13 +24,12 @@ services:
     container_name: go-vue-admin-backend
     restart: always
     depends_on:
-      mysql:
-        condition: service_healthy
+      - sqlserver
     environment:
-      DB_HOST: mysql
-      DB_PORT: 3306
-      DB_USER: root
-      DB_PASSWORD: root123
+      DB_HOST: sqlserver
+      DB_PORT: 1433
+      DB_USER: sa
+      DB_PASSWORD: Password123!
       DB_NAME: go_vue_admin
       JWT_SECRET: your-super-secret-key-change-in-production
       SERVER_PORT: "8080"
@@ -45,6 +38,7 @@ services:
       - "8080:8080"
     networks:
       - app-network
+
 
   frontend:
     build:
@@ -60,7 +54,7 @@ services:
       - app-network
 
 volumes:
-  mysql_data:
+  sqlserver_data:
 
 networks:
   app-network:

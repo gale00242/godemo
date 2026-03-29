@@ -30,6 +30,15 @@ type UpdateUserRequest struct {
 	RoleIDs  []uint `json:"role_ids"`
 }
 
+type UserSearchRequest struct {
+	Page     int    `form:"page" json:"page"`
+	PageSize int    `form:"page_size" json:"page_size"`
+	Username string `form:"username" json:"username"`
+	Email    string `form:"email" json:"email"`
+	Phone    string `form:"phone" json:"phone"`
+	IsActive *bool  `form:"is_active" json:"is_active"`
+}
+
 type PageResult struct {
 	Items      interface{} `json:"items"`
 	Total      int64       `json:"total"`
@@ -39,32 +48,52 @@ type PageResult struct {
 }
 
 func GetUsers(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
-
-	if page < 1 {
-		page = 1
+	var req UserSearchRequest
+	if err := c.ShouldBindQuery(&req); err != nil {
+		req.Page = 1
+		req.PageSize = 10
 	}
-	if pageSize < 1 || pageSize > 100 {
-		pageSize = 10
+
+	if req.Page < 1 {
+		req.Page = 1
+	}
+	if req.PageSize < 1 || req.PageSize > 100 {
+		req.PageSize = 10
 	}
 
 	var users []models.User
 	var total int64
 
-	offset := (page - 1) * pageSize
+	offset := (req.Page - 1) * req.PageSize
 
-	if err := database.DB.Model(&models.User{}).Count(&total).Error; err != nil {
+	// 构建动态查询
+	query := database.DB.Model(&models.User{})
+
+	if req.Username != "" {
+		query = query.Where("username LIKE ?", "%"+req.Username+"%")
+	}
+	if req.Email != "" {
+		query = query.Where("email LIKE ?", "%"+req.Email+"%")
+	}
+	if req.Phone != "" {
+		query = query.Where("phone LIKE ?", "%"+req.Phone+"%")
+	}
+	if req.IsActive != nil {
+		query = query.Where("is_active = ?", *req.IsActive)
+	}
+
+	if err := query.Count(&total).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "获取用户总数失败"})
 		return
 	}
-	if err := database.DB.Preload("Roles").Preload("Sites").Offset(offset).Limit(pageSize).Find(&users).Error; err != nil {
+
+	if err := query.Preload("Roles").Preload("Sites").Offset(offset).Limit(req.PageSize).Find(&users).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"code": 500, "message": "获取用户列表失败"})
 		return
 	}
 
-	totalPages := int(total) / pageSize
-	if int(total)%pageSize > 0 {
+	totalPages := int(total) / req.PageSize
+	if int(total)%req.PageSize > 0 {
 		totalPages++
 	}
 
@@ -73,8 +102,8 @@ func GetUsers(c *gin.Context) {
 		"data": PageResult{
 			Items:      users,
 			Total:      total,
-			Page:       page,
-			PageSize:   pageSize,
+			Page:       req.Page,
+			PageSize:   req.PageSize,
 			TotalPages: totalPages,
 		},
 	})

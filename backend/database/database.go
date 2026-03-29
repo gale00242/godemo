@@ -6,25 +6,27 @@ import (
 	"time"
 
 	"go-vue-admin/config"
-
-	"gorm.io/driver/mysql"
+	"gorm.io/driver/sqlserver"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
+	"net/url"
 )
 
 var DB *gorm.DB
 
 func InitDatabase() {
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+	// 对密码进行 URL 编码，防止特殊字符导致 DSN 解析失败
+	encodedPassword := url.QueryEscape(config.AppConfig.DBPassword)
+	dsn := fmt.Sprintf("sqlserver://%s:%s@%s:%d?database=%s",
 		config.AppConfig.DBUser,
-		config.AppConfig.DBPassword,
+		encodedPassword,
 		config.AppConfig.DBHost,
 		config.AppConfig.DBPort,
 		config.AppConfig.DBName,
 	)
 
 	var err error
-	DB, err = gorm.Open(mysql.Open(dsn), &gorm.Config{
+	DB, err = gorm.Open(sqlserver.Open(dsn), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Info),
 	})
 	if err != nil {
