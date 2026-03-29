@@ -3,7 +3,7 @@ import { defineStore } from 'pinia'
 export const useTabStore = defineStore('tab', {
   state: () => ({
     tabs: [
-      { path: '/home', name: 'Home', title: '首页', closable: false }
+      { path: '/home', name: 'Home', title: 'menu.home', closable: false }
     ],
     currentTab: '/home'
   }),
@@ -50,7 +50,7 @@ export const useTabStore = defineStore('tab', {
     },
 
     closeAllTabs() {
-      this.tabs = [{ path: '/home', name: 'Home', title: '首页', closable: false }]
+      this.tabs = [{ path: '/home', name: 'Home', title: 'menu.home', closable: false }]
       this.currentTab = '/home'
     },
 
