@@ -26,17 +26,17 @@
           <el-sub-menu v-if="menu.children && menu.children.length" :index="menu.path + ''">
             <template #title>
               <el-icon><component :is="getIcon(menu.icon)" /></el-icon>
-              <span>{{ getMenuTitle(menu.name) }}</span>
+              <span>{{ $t(getMenuTitleKey(menu)) }}</span>
             </template>
             <el-menu-item v-for="child in menu.children" :key="child.id" :index="child.path">
               <el-icon><component :is="getIcon(child.icon)" /></el-icon>
-              <template #title>{{ getMenuTitle(child.name) }}</template>
+              <template #title>{{ $t(getMenuTitleKey(child)) }}</template>
             </el-menu-item>
           </el-sub-menu>
           <!-- 无子菜单 -->
           <el-menu-item v-else :index="menu.path">
             <el-icon><component :is="getIcon(menu.icon)" /></el-icon>
-            <template #title>{{ getMenuTitle(menu.name) }}</template>
+            <template #title>{{ $t(getMenuTitleKey(menu)) }}</template>
           </el-menu-item>
         </template>
       </el-menu>
@@ -58,10 +58,10 @@
               <el-icon><HomeFilled /></el-icon>
               {{ $t('menu.home') }}
             </el-breadcrumb-item>
-            <el-breadcrumb-item v-if="currentRouteName">
-              {{ getMenuTitle(currentRouteName) }}
+            <el-breadcrumb-item v-if="currentRouteTitle">
+              {{ $t(currentRouteTitle) }}
             </el-breadcrumb-item>
-          </breadcrumb>
+          </el-breadcrumb>
         </div>
 
         <div class="header-right">
@@ -73,10 +73,10 @@
             </div>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item command="zh-CN" :class="{ active: currentLocale === 'zh-CN' }">
+                <el-dropdown-item command="zh-CN" :class="{ active: locale === 'zh-CN' }">
                   简体中文
                 </el-dropdown-item>
-                <el-dropdown-item command="en-US" :class="{ active: currentLocale === 'en-US' }">
+                <el-dropdown-item command="en-US" :class="{ active: locale === 'en-US' }">
                   English
                 </el-dropdown-item>
               </el-dropdown-menu>
@@ -126,30 +126,11 @@
           <el-tab-pane
             v-for="tab in tabStore.tabs"
             :key="tab.path"
-            :label="getMenuTitle(tab.title)"
+            :label="$t(getTabTitleKey(tab))"
             :name="tab.path"
             :closable="tab.closable"
           />
         </el-tabs>
-        <div class="tabs-actions">
-          <el-dropdown @command="handleTabsCommand" trigger="click">
-            <span class="tabs-action-btn">
-              <el-icon><MoreFilled /></el-icon>
-            </span>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item command="refresh">
-                  <el-icon><Refresh /></el-icon>
-                  {{ $t('common.reset') }}
-                </el-dropdown-item>
-                <el-dropdown-item command="closeCurrent">
-                  <el-icon><Close /></el-icon>
-                  {{ $t('common.delete') }}
-                </el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
-        </div>
       </div>
 
       <!-- 页面内容 -->
@@ -187,20 +168,12 @@ const tabStore = useTabStore()
 const menus = ref([])
 const isCollapse = ref(false)
 
-const currentLocale = computed(() => locale.value)
 const currentLocaleDisplay = computed(() => locale.value === 'zh-CN' ? '中文' : 'English')
 
 const activeMenu = computed(() => route.path)
 
-const currentRouteName = computed(() => {
-  const menu = menus.value.find(m => m.path === route.path)
-  if (menu) return menu.name
-  for (const m of menus.value) {
-    if (m.children) {
-      const child = m.children.find(c => c.path === route.path)
-      if (child) return child.name
-    }
-  }
+// 获取当前路由的国际化 Key
+const currentRouteTitle = computed(() => {
   return route.meta?.title || ''
 })
 
@@ -208,22 +181,23 @@ const iconMap = {
   HomeFilled, User, Key, Setting, OfficeBuilding, Monitor
 }
 
-// 菜单映射表：必须严格对应数据库 init.sql 中的名称
-const menuKeyMap = {
-  '首页': 'home',
-  '系统设置': 'systemSettings',
-  '用户管理': 'userMgmt',
-  '角色管理': 'roleMgmt',
-  '站点管理': 'siteMgmt'
+// 核心改进：根据 Path 从路由配置中获取国际化 Key
+const getMenuTitleKey = (menuItem) => {
+  // 从路由表中查找匹配的路由
+  const routeMatch = router.resolve(menuItem.path)
+  if (routeMatch && routeMatch.meta && routeMatch.meta.title) {
+    return routeMatch.meta.title
+  }
+  // 如果找不到 Key，直接返回原始名称
+  return menuItem.name
 }
 
-// 翻译函数：增加响应式 key 以强制重新渲染
-const getMenuTitle = (name) => {
-  if (!name) return ''
-  const cleanName = name.trim()
-  const key = menuKeyMap[cleanName]
-  // 必须使用 t 函数，i18n 会自动追踪 locale 变化
-  return key ? t('menu.' + key) : cleanName
+const getTabTitleKey = (tab) => {
+  const routeMatch = router.resolve(tab.path)
+  if (routeMatch && routeMatch.meta && routeMatch.meta.title) {
+    return routeMatch.meta.title
+  }
+  return tab.title
 }
 
 const getIcon = (iconName) => iconMap[iconName] || HomeFilled
@@ -238,27 +212,6 @@ const loadMenus = async () => {
 }
 
 const handleMenuSelect = (index) => {
-  let selectedMenu = null
-  for (const menu of menus.value) {
-    if (menu.path === index) {
-      selectedMenu = menu
-      break
-    }
-    if (menu.children) {
-      const child = menu.children.find(c => c.path === index)
-      if (child) {
-        selectedMenu = child
-        break
-      }
-    }
-  }
-  if (selectedMenu) {
-    tabStore.addTab({
-      path: index,
-      name: selectedMenu.name,
-      meta: { title: selectedMenu.name }
-    })
-  }
   router.push(index)
 }
 
@@ -275,53 +228,18 @@ const handleTabRemove = (path) => {
   }
 }
 
-const handleTabsCommand = (command) => {
-  switch (command) {
-    case 'refresh':
-      window.location.reload()
-      break
-    case 'closeCurrent':
-      handleTabRemove(tabStore.currentTab)
-      break
-  }
-}
-
-const handleCommand = (command) => {
-  if (command === 'logout') {
-    ElMessageBox.confirm(t('common.logout') + '?', t('common.confirm'), {
-      confirmButtonText: t('common.confirm'),
-      cancelButtonText: t('common.cancel'),
-      type: 'warning'
-    }).then(() => {
-      authStore.logout()
-      router.push('/login')
-      ElMessage.success(t('common.success'))
-    }).catch(() => {})
-  }
-}
-
 const handleLanguageChange = (lang) => {
   locale.value = lang
   localStorage.setItem('locale', lang)
   ElMessage.success(lang === 'en-US' ? 'Language switched to English' : '语言已切换为中文')
 }
 
-watch(() => route.path, (path) => {
-  const menu = menus.value.find(m => m.path === path)
-  if (menu) {
-    tabStore.addTab({ path, name: menu.name, meta: { title: menu.name } })
-  } else {
-    for (const m of menus.value) {
-      if (m.children) {
-        const child = m.children.find(c => c.path === path)
-        if (child) {
-          tabStore.addTab({ path, name: child.name, meta: { title: child.name } })
-          break
-        }
-      }
-    }
+const handleCommand = (command) => {
+  if (command === 'logout') {
+    authStore.logout()
+    router.push('/login')
   }
-}, { immediate: false })
+}
 
 onMounted(async () => {
   if (!authStore.token) {
@@ -349,64 +267,58 @@ onMounted(async () => {
   
   await loadMenus()
   
-  // 添加首页tab
-  tabStore.addTab({ path: '/home', name: '首页', meta: { title: '首页' } })
+  // 初始添加首页tab
+  tabStore.addTab({ path: '/home', name: 'Home', meta: { title: 'menu.home' } })
+})
+
+// 监听路由变化，自动添加标签页
+watch(() => route.path, (path) => {
+  if (route.meta && route.meta.title) {
+    tabStore.addTab({ path, name: route.name, meta: { title: route.meta.title } })
+  }
 })
 </script>
 
 <style>
-/* 变量和基础样式保持不变 */
 :root {
   --primary: #5B8DEF;
   --primary-light: #8FADFF;
   --primary-dark: #3D6DD4;
-  --primary-soft: rgba(91, 141, 239, 0.1);
   --gradient-primary: linear-gradient(135deg, #5B8DEF 0%, #7EC5FF 100%);
-  --gradient-success: linear-gradient(135deg, #48BB78 0%, #68D391 100%);
-  --gradient-danger: linear-gradient(135deg, #E53E3E 0%, #FC8181 100%);
   --bg-body: #EEF2F8;
   --bg-card: #FFFFFF;
   --bg-sidebar: #1A2332;
   --bg-sidebar-hover: #2D3748;
-  --bg-sidebar-active: rgba(91, 141, 239, 0.15);
-  --bg-input: #F8FAFC;
   --bg-header: #FFFFFF;
-  --border-default: #E2E8F0;
-  --border-radius-sm: 6px;
+  --border-default: #E2E880;
   --border-radius: 10px;
-  --border-radius-lg: 16px;
   --text-primary: #1A2332;
   --text-secondary: #4A5568;
   --text-muted: #8896A8;
-  --success: #48BB78;
-  --danger: #E53E3E;
   --sidebar-width: 260px;
   --header-height: 64px;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg-body); }
+body { font-family: 'Inter', sans-serif; background: var(--bg-body); }
 </style>
 
 <style scoped>
-/* 样式部分保持不变 */
 .layout-container { height: 100vh; display: flex; }
-.aside { background: var(--bg-sidebar); transition: width 0.3s ease; overflow: hidden; display: flex; flex-direction: column; }
-.sidebar-header { height: var(--header-height); display: flex; align-items: center; padding: 0 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); flex-shrink: 0; }
+.aside { background: var(--bg-sidebar); transition: width 0.3s ease; display: flex; flex-direction: column; }
+.sidebar-header { height: var(--header-height); display: flex; align-items: center; padding: 0 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
 .sidebar-logo { display: flex; align-items: center; gap: 12px; }
-.sidebar-logo-icon { width: 36px; height: 36px; background: var(--gradient-primary); border-radius: var(--border-radius); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; color: white; flex-shrink: 0; }
-.sidebar-logo-text { font-size: 18px; font-weight: 700; color: white; white-space: nowrap; }
+.sidebar-logo-icon { width: 36px; height: 36px; background: var(--gradient-primary); border-radius: var(--border-radius); display: flex; align-items: center; justify-content: center; font-weight: 700; color: white; }
 .main-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 .header { height: var(--header-height); background: var(--bg-header); border-bottom: 1px solid var(--border-default); display: flex; align-items: center; justify-content: space-between; padding: 0 24px; }
 .header-left { display: flex; align-items: center; gap: 16px; }
-.header-collapse-btn { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: var(--border-radius-sm); color: var(--text-secondary); cursor: pointer; }
-.header-right { display: flex; align-items: center; gap: 8px; }
-.header-action { display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: var(--border-radius); cursor: pointer; font-size: 14px; color: var(--text-secondary); }
-.header-profile { display: flex; align-items: center; gap: 12px; padding: 6px 12px 6px 6px; border-radius: var(--border-radius); cursor: pointer; }
-.header-profile-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--gradient-primary); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; }
-.tabs-container { display: flex; align-items: center; background: var(--bg-card); padding: 0 16px; border-bottom: 1px solid var(--border-default); }
-.main-tabs { flex: 1; }
-.main-tabs :deep(.el-tabs__header) { margin: 0; border: none; }
-.main-content { padding: 16px; overflow-y: auto; flex: 1; }
+.header-collapse-btn { cursor: pointer; color: var(--text-secondary); display: flex; align-items: center; }
+.header-right { display: flex; align-items: center; gap: 16px; }
+.header-action { cursor: pointer; display: flex; align-items: center; gap: 4px; color: var(--text-secondary); }
+.header-profile { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.header-profile-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--gradient-primary); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; }
+.tabs-container { background: var(--bg-card); padding: 0 16px; border-bottom: 1px solid var(--border-default); }
+.main-tabs :deep(.el-tabs__header) { margin: 0; border-bottom: none; }
+.main-content { padding: 20px; overflow-y: auto; flex: 1; }
 .fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
 </style>

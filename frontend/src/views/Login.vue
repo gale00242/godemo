@@ -132,7 +132,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '../stores/auth'
@@ -140,7 +140,8 @@ import { useI18n } from 'vue-i18n'
 import { Bell } from '@element-plus/icons-vue'
 import api from '../api'
 
-const { locale } = useI18n()
+const i18n = useI18n()
+const { locale } = i18n
 const router = useRouter()
 const authStore = useAuthStore()
 
@@ -148,7 +149,7 @@ const loginFormRef = ref()
 const loading = ref(false)
 const rememberMe = ref(false)
 const sites = ref([])
-const currentLocale = ref(localStorage.getItem('locale') || 'zh-CN')
+const currentLocale = computed(() => locale.value)
 
 const loginForm = reactive({
   site_code: 'site-a',
@@ -182,9 +183,8 @@ const handleLogin = async () => {
   try {
     await authStore.login(loginForm)
     
-    // 强制持久化语言选择
-    localStorage.setItem('locale', currentLocale.value)
-    locale.value = currentLocale.value
+    // 确保语言持久化
+    localStorage.setItem('locale', locale.value)
     
     ElMessage.success('登录成功')
     router.push('/')
@@ -196,9 +196,8 @@ const handleLogin = async () => {
 }
 
 const handleLanguageChange = (lang) => {
-  currentLocale.value = lang
-  localStorage.setItem('locale', lang)
   locale.value = lang
+  localStorage.setItem('locale', lang)
 }
 
 onMounted(() => {

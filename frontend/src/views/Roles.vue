@@ -101,7 +101,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Key } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
@@ -111,9 +111,10 @@ const { t } = useI18n()
 const roles = ref([])
 const loading = ref(false)
 const dialogVisible = ref(false)
-const dialogTitle = ref(t('common.add'))
 const submitting = ref(false)
 const formRef = ref()
+
+const dialogTitle = computed(() => roleForm.id ? t('common.edit') : t('common.add'))
 
 const roleForm = reactive({
   id: null,
@@ -123,10 +124,10 @@ const roleForm = reactive({
   is_active: true
 })
 
-const formRules = {
+const formRules = computed(() => ({
   name: [{ required: true, message: t('roles.nameRequired'), trigger: 'blur' }],
   code: [{ required: true, message: t('roles.codeRequired'), trigger: 'blur' }],
-}
+}))
 
 const getRoleClass = (code) => {
   const map = {
@@ -151,13 +152,11 @@ const loadRoles = async () => {
 }
 
 const handleAdd = () => {
-  dialogTitle.value = t('common.add')
   Object.assign(roleForm, { id: null, name: '', code: '', description: '', is_active: true })
   dialogVisible.value = true
 }
 
 const handleEdit = (row) => {
-  dialogTitle.value = t('common.edit')
   Object.assign(roleForm, { ...row })
   dialogVisible.value = true
 }

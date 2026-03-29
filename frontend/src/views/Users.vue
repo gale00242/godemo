@@ -215,7 +215,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
@@ -227,10 +227,11 @@ const roles = ref([])
 const sites = ref([])
 const loading = ref(false)
 const dialogVisible = ref(false)
-const dialogTitle = ref(t('common.add'))
 const submitting = ref(false)
 const formRef = ref()
 const searchKeyword = ref('')
+
+const dialogTitle = computed(() => userForm.id ? t('common.edit') : t('common.add'))
 
 const pagination = reactive({
   page: 1,
@@ -249,10 +250,10 @@ const userForm = reactive({
   site_ids: []
 })
 
-const formRules = {
+const formRules = computed(() => ({
   username: [{ required: true, message: t('users.usernameRequired'), trigger: 'blur' }],
   email: [{ type: 'email', message: t('users.emailInvalid'), trigger: 'blur' }],
-}
+}))
 
 const getRoleClass = (code) => {
   const map = {
@@ -296,7 +297,6 @@ const handleSearch = () => {
 }
 
 const handleAdd = () => {
-  dialogTitle.value = t('common.add')
   Object.assign(userForm, {
     id: null,
     username: '',
@@ -311,7 +311,6 @@ const handleAdd = () => {
 }
 
 const handleEdit = (row) => {
-  dialogTitle.value = t('common.edit')
   Object.assign(userForm, {
     id: row.id,
     username: row.username,

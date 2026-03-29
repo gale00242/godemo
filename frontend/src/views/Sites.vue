@@ -104,7 +104,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { OfficeBuilding } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
@@ -114,9 +114,10 @@ const { t } = useI18n()
 const sites = ref([])
 const loading = ref(false)
 const dialogVisible = ref(false)
-const dialogTitle = ref(t('common.add'))
 const submitting = ref(false)
 const formRef = ref()
+
+const dialogTitle = computed(() => siteForm.id ? t('common.edit') : t('common.add'))
 
 const siteForm = reactive({
   id: null,
@@ -126,10 +127,10 @@ const siteForm = reactive({
   is_active: true
 })
 
-const formRules = {
+const formRules = computed(() => ({
   name: [{ required: true, message: t('sites.nameRequired'), trigger: 'blur' }],
   code: [{ required: true, message: t('sites.codeRequired'), trigger: 'blur' }],
-}
+}))
 
 const loadSites = async () => {
   loading.value = true
@@ -144,13 +145,11 @@ const loadSites = async () => {
 }
 
 const handleAdd = () => {
-  dialogTitle.value = t('common.add')
   Object.assign(siteForm, { id: null, name: '', code: '', domain: '', is_active: true })
   dialogVisible.value = true
 }
 
 const handleEdit = (row) => {
-  dialogTitle.value = t('common.edit')
   Object.assign(siteForm, { ...row })
   dialogVisible.value = true
 }
