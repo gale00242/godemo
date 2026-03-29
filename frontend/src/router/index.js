@@ -15,25 +15,30 @@ const routes = [
     meta: { requiresAuth: true },
     children: [
       {
-        path: 'home',
+        path: '/home',
         name: 'Home',
         component: () => import('../views/Home.vue'),
         meta: { title: 'menu.home' },
       },
+      // 系统设置及其子路由
       {
-        path: 'users',
+        path: '/settings',
+        meta: { title: 'menu.systemSettings' },
+      },
+      {
+        path: '/users',
         name: 'Users',
         component: () => import('../views/Users.vue'),
         meta: { title: 'menu.userMgmt' },
       },
       {
-        path: 'roles',
+        path: '/roles',
         name: 'Roles',
         component: () => import('../views/Roles.vue'),
         meta: { title: 'menu.roleMgmt' },
       },
       {
-        path: 'sites',
+        path: '/sites',
         name: 'Sites',
         component: () => import('../views/Sites.vue'),
         meta: { title: 'menu.siteMgmt' },
